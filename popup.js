@@ -5,6 +5,8 @@ const startAllBtn = document.getElementById('startAllBtn');
 const stopAllBtn = document.getElementById('stopAllBtn');
 const typeFilterEl = document.getElementById('typeFilter');
 const langSelectEl = document.getElementById('langSelect');
+// Base folder customization removed - using browser default Downloads folder
+const folderInfoMsgEl = document.getElementById('folderInfoMsg');
 const hdrTitleEl = document.getElementById('hdrTitle');
 const resultadosEl = document.getElementById('resultados');
 
@@ -14,12 +16,12 @@ let urls = {};
 const VIDEO_URLS_KEY = 'videoUrls';
 const TYPE_FILTER_KEY = 'typeFilter';
 const LANG_KEY = 'uiLang';
-const BASE_DIR = 'onlyfans';
 let queue = [];
 let running = false;
 let currentUrl = null;
 const controllers = new Map();
 let refreshTimer = null;
+
 
 // =====================
 // I18N
@@ -29,9 +31,11 @@ const I18N = {
     title_page: 'Registros de Fetch de Video',
     header_detected_links: 'Enlaces detectados',
     filter_type_title: 'Tipo',
-    filter_all: 'Fotos + Videos',
-    filter_photos: 'Solo fotos',
-    filter_videos: 'Solo videos',
+    filter_type_title: 'Tipo',
+    filter_all: 'Todo',
+    filter_photos: 'Fotos',
+    filter_videos: 'Videos',
+    filter_audio: 'Audio',
     refresh_title: 'Actualizar',
     start_all_title: 'Iniciar todas',
     stop_all_title: 'Detener todas',
@@ -44,15 +48,18 @@ const I18N = {
     action_start: 'Iniciar',
     action_stop: 'Detener',
     lang_title: 'Idioma',
-    tasks_label: 'Tareas'
+    tasks_label: 'Tareas',
+    folder_info: '📁 Los archivos se guardan en la carpeta de Descargas predeterminada del navegador'
   },
   en: {
     title_page: 'Video Fetch Logs',
     header_detected_links: 'Detected links',
     filter_type_title: 'Type',
-    filter_all: 'Photos + Videos',
-    filter_photos: 'Photos only',
-    filter_videos: 'Videos only',
+    filter_type_title: 'Type',
+    filter_all: 'All',
+    filter_photos: 'Photos',
+    filter_videos: 'Videos',
+    filter_audio: 'Audio',
     refresh_title: 'Refresh',
     start_all_title: 'Start all',
     stop_all_title: 'Stop all',
@@ -65,7 +72,8 @@ const I18N = {
     action_start: 'Start',
     action_stop: 'Stop',
     lang_title: 'Language',
-    tasks_label: 'Tasks'
+    tasks_label: 'Tasks',
+    folder_info: '📁 Files are saved to the browser\'s default Downloads folder'
   },
   ja: {
     title_page: '動画フェッチのログ',
@@ -86,7 +94,8 @@ const I18N = {
     action_start: '開始',
     action_stop: '停止',
     lang_title: '言語',
-    tasks_label: 'タスク'
+    tasks_label: 'タスク',
+    folder_info: '📁 ファイルはブラウザのデフォルトのダウンロードフォルダに保存されます'
   },
   fr: {
     title_page: 'Journaux de récupération vidéo',
@@ -107,7 +116,8 @@ const I18N = {
     action_start: 'Démarrer',
     action_stop: 'Arrêter',
     lang_title: 'Langue',
-    tasks_label: 'Tâches'
+    tasks_label: 'Tâches',
+    folder_info: '📁 Les fichiers sont enregistrés dans le dossier Téléchargements par défaut du navigateur'
   },
   de: {
     title_page: 'Video-Fetch-Protokolle',
@@ -128,8 +138,9 @@ const I18N = {
     action_start: 'Starten',
     action_stop: 'Stoppen',
     lang_title: 'Sprache',
-    tasks_label: 'Aufgaben'
-  } 
+    tasks_label: 'Aufgaben',
+    folder_info: '📁 Dateien werden im Standard-Download-Ordner des Browsers gespeichert'
+  }
 };
 
 let currentLang = 'es';
@@ -161,7 +172,7 @@ function setHeaderTitle() {
       done = Object.values(urls || {}).filter((it) => !!(it && it.descargado)).length;
     } catch (_) { done = 0; }
     hdrTitleEl.textContent = `${t('header_detected_links')} (${done}/${total})`;
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function updateResultados() {
@@ -173,7 +184,7 @@ function updateResultados() {
       done = Object.values(urls || {}).filter((it) => !!(it && it.descargado)).length;
     } catch (_) { done = 0; }
     resultadosEl.textContent = `${t('tasks_label')}: ${done}/${total}`;
-  } catch (_) {}
+  } catch (_) { }
 }
 
 async function loadLang() {
@@ -185,7 +196,7 @@ async function loadLang() {
 }
 
 function applyUITranslations() {
-  try { document.title = t('title_page'); } catch {}
+  try { document.title = t('title_page'); } catch { }
   setHeaderTitle();
   updateResultados();
   if (typeFilterEl) {
@@ -197,6 +208,7 @@ function applyUITranslations() {
       if (o.value === 'all') o.textContent = t('filter_all');
       else if (o.value === 'photos') o.textContent = t('filter_photos');
       else if (o.value === 'videos') o.textContent = t('filter_videos');
+      else if (o.value === 'audio') o.textContent = t('filter_audio');
     }
   }
   if (refreshBtn) refreshBtn.title = t('refresh_title');
@@ -204,6 +216,7 @@ function applyUITranslations() {
   if (stopAllBtn) stopAllBtn.title = t('stop_all_title');
   if (clearBtn) clearBtn.title = t('clear_title');
   if (langSelectEl) langSelectEl.title = t('lang_title');
+  if (folderInfoMsgEl) folderInfoMsgEl.textContent = t('folder_info');
   renderUrlList();
 }
 
@@ -244,6 +257,25 @@ async function loadTypeFilter() {
   });
 }
 
+
+
+async function getModelName() {
+  try {
+    const tab = await getActiveTab();
+    const url = tab?.url || '';
+    const u = new URL(url);
+    const parts = u.pathname.split('/').filter(Boolean);
+    if (parts.length > 0) {
+      const p1 = parts[0];
+      // Excluir rutas reservadas comunes
+      if (!['my', 'api2', 'posts', 'photos', 'videos', 'messages', 'settings', 'bookmarks'].includes(p1)) {
+        return p1;
+      }
+    }
+  } catch { }
+  return 'unknown_model';
+}
+
 function updateUrlsFromLogs(logs, baseUrls) {
   const out = { ...(baseUrls || {}) };
   if (!Array.isArray(logs)) return out;
@@ -253,6 +285,8 @@ function updateUrlsFromLogs(logs, baseUrls) {
         const lowerUrl = String(i.url || '').toLowerCase();
         const isPhoto = lowerUrl.includes('/posts/photos') || lowerUrl.includes('photo');
         const isVideo = lowerUrl.includes('/posts/videos') || lowerUrl.includes('video');
+        const isMessage = lowerUrl.includes('/messages');
+
         i.bodyJson.list.forEach((element) => {
           if (!element || !element.media) return;
           element.media.forEach((m) => {
@@ -260,13 +294,26 @@ function updateUrlsFromLogs(logs, baseUrls) {
               const full = m && m.files && m.files.full;
               const href = full && full.url;
               if (!href) return;
+
               if (!out[href]) {
-                out[href] = { filename: full?.name || full?.filename || deriveFilename(href), descargado: false, progress: 0, type: isPhoto ? 'photo' : (isVideo ? 'video' : undefined) };
+                let type = 'video';
+                if (m.type === 'photo') type = 'photo';
+                else if (m.type === 'audio') type = 'audio';
+                else if (isPhoto) type = 'photo';
+                else if (isVideo) type = 'video';
+
+                out[href] = {
+                  filename: full?.name || full?.filename || deriveFilename(href),
+                  descargado: false,
+                  progress: 0,
+                  type: type,
+                  origin: isMessage ? 'messages' : 'posts'
+                };
               }
-            } catch (_) {}
+            } catch (_) { }
           });
         });
-      } catch (_) {}
+      } catch (_) { }
     }
   }
   return out;
@@ -274,7 +321,7 @@ function updateUrlsFromLogs(logs, baseUrls) {
 
 function getCurrentFilter() {
   const v = typeFilterEl ? typeFilterEl.value : 'all';
-  return v === 'photos' || v === 'videos' ? v : 'all';
+  return ['photos', 'videos', 'audio'].includes(v) ? v : 'all';
 }
 
 function renderUrlList() {
@@ -285,11 +332,12 @@ function renderUrlList() {
   const entries = Object.entries(urls).filter(([href, info]) => {
     if (filter === 'photos') return (info?.type || '').startsWith('photo');
     if (filter === 'videos') return (info?.type || '').startsWith('video');
+    if (filter === 'audio') return (info?.type || '').startsWith('audio');
     return true;
   });
   if (entries.length === 0) {
     const empty = document.createElement('div');
-    try { empty.textContent = t('empty_message'); } catch {}
+    try { empty.textContent = t('empty_message'); } catch { }
     empty.style.color = '#666';
     empty.style.padding = '10px';
     logsEl.appendChild(empty);
@@ -302,8 +350,23 @@ function renderUrlList() {
 
     const line = document.createElement('div');
     line.className = 'url-line';
+
+    if (info?.origin === 'messages') {
+      const tag = document.createElement('span');
+      tag.textContent = 'MSG';
+      tag.style.backgroundColor = '#ffd480';
+      tag.style.color = '#121821';
+      tag.style.fontSize = '10px';
+      tag.style.fontWeight = 'bold';
+      tag.style.padding = '2px 5px';
+      tag.style.borderRadius = '4px';
+      tag.style.marginRight = '6px';
+      tag.style.verticalAlign = 'middle';
+      line.appendChild(tag);
+    }
+
     const name = info?.filename || deriveFilename(href);
-    line.textContent = name;
+    line.appendChild(document.createTextNode(name));
     row.appendChild(line);
 
     const div = document.createElement('div');
@@ -325,7 +388,7 @@ function renderUrlList() {
     barWrap.appendChild(progress);
     barWrap.appendChild(status);
     div.appendChild(barWrap);
-    
+
 
     const actions = document.createElement('div');
     actions.className = 'bar-wrap';
@@ -387,7 +450,7 @@ clearBtn.addEventListener('click', () => {
     queue = [];
     running = false;
     currentUrl = null;
-    controllers.forEach((c) => { try { c.abort(); } catch (_) {} });
+    controllers.forEach((c) => { try { c.abort(); } catch (_) { } });
     controllers.clear();
     urls = {};
     // Limpiar todo el storage local de la extensión
@@ -406,8 +469,11 @@ clearBtn.addEventListener('click', () => {
   }
 });
 
-refreshBtn.addEventListener('click', () => {
-  refresh();
+refreshBtn.addEventListener('click', async () => {
+  const tab = await getActiveTab();
+  if (tab && tab.id) {
+    chrome.tabs.reload(tab.id);
+  }
 });
 
 startAllBtn.addEventListener('click', () => startAll());
@@ -432,6 +498,9 @@ if (langSelectEl) {
   });
 }
 
+
+
+
 chrome.storage.onChanged.addListener(async (changes, area) => {
   if (area !== 'local') return;
   if (changes.videoFetchLogs) {
@@ -453,6 +522,7 @@ chrome.storage.onChanged.addListener(async (changes, area) => {
     if (langSelectEl) langSelectEl.value = currentLang;
     applyUITranslations();
   }
+
 });
 
 // Recibir logs del background y volcarlos a la consola del popup
@@ -466,7 +536,7 @@ chrome.runtime.onMessage.addListener((msg) => {
     } else {
       console.log(prefix, event, data);
     }
-  } catch (_) {}
+  } catch (_) { }
 });
 
 // =====================
@@ -492,7 +562,7 @@ function stopOne(href) {
   const idx = queue.indexOf(href);
   if (idx >= 0) queue.splice(idx, 1);
   const c = controllers.get(href);
-  if (c) { try { c.abort(); } catch (_) {} controllers.delete(href); }
+  if (c) { try { c.abort(); } catch (_) { } controllers.delete(href); }
   setUrlState(href, (it) => { it.status = 'paused'; return it; });
   if (currentUrl === href) {
     running = false; currentUrl = null; processNext();
@@ -503,7 +573,10 @@ function startAll() {
   const filter = getCurrentFilter();
   for (const [href, it] of Object.entries(urls)) {
     const t = (it && it.type) || '';
-    const match = filter === 'all' || (filter === 'photos' && t.startsWith('photo')) || (filter === 'videos' && t.startsWith('video'));
+    const match = filter === 'all' ||
+      (filter === 'photos' && t.startsWith('photo')) ||
+      (filter === 'videos' && t.startsWith('video')) ||
+      (filter === 'audio' && t.startsWith('audio'));
     if (match && it && !it.descargado && !queue.includes(href)) queue.push(href);
   }
   if (!running) processNext();
@@ -512,7 +585,7 @@ function startAll() {
 function stopAll() {
   for (const href of queue) {
     const c = controllers.get(href);
-    if (c) { try { c.abort(); } catch (_) {} controllers.delete(href); }
+    if (c) { try { c.abort(); } catch (_) { } controllers.delete(href); }
     setUrlState(href, (it) => { if (it.status === 'downloading') it.status = 'paused'; return it; });
   }
   queue = [];
@@ -540,7 +613,8 @@ async function fetchAndSave(href) {
     const buf = await resp.arrayBuffer();
     const blob = new Blob([buf], { type: contentType || undefined });
     name = ensureExtension(name, contentType, href, typ);
-    saveBlob(blob, name, typ);
+    const modelName = await getModelName();
+    await saveBlob(blob, name, typ, modelName);
     return { size: buf.byteLength };
   }
   while (true) {
@@ -559,7 +633,8 @@ async function fetchAndSave(href) {
   const blob = new Blob(chunks, { type: contentType || undefined });
   name = ensureExtension(name, contentType, href, typ);
   console.log('[POPUP] fetch:completed', href, received);
-  saveBlob(blob, name, typ);
+  const modelName = await getModelName();
+  await saveBlob(blob, name, typ, modelName);
   return { size: received };
 }
 
@@ -574,7 +649,11 @@ function ensureExtension(filename, contentType, url, typ) {
       'image/jpeg': 'jpg',
       'image/png': 'png',
       'image/webp': 'webp',
-      'image/gif': 'gif'
+      'image/gif': 'gif',
+      'audio/mpeg': 'mp3',
+      'audio/wav': 'wav',
+      'audio/ogg': 'ogg',
+      'audio/mp4': 'm4a'
     };
     let ext = map[ct] || '';
     if (!ext) {
@@ -582,12 +661,13 @@ function ensureExtension(filename, contentType, url, typ) {
         const u = new URL(url);
         const m = (u.pathname || '').match(/\.([a-z0-9]{2,5})$/i);
         if (m) ext = m[1];
-      } catch {}
+      } catch { }
     }
     if (!ext) {
       if (ct.startsWith('image/')) ext = 'jpg';
       else if (ct.startsWith('video/')) ext = 'mp4';
-      else ext = typ === 'photo' ? 'jpg' : 'mp4';
+      else if (ct.startsWith('audio/')) ext = 'mp3';
+      else ext = typ === 'photo' ? 'jpg' : (typ === 'audio' ? 'mp3' : 'mp4');
     }
     return filename ? `${filename}.${ext}` : `file.${ext}`;
   } catch {
@@ -595,13 +675,19 @@ function ensureExtension(filename, contentType, url, typ) {
   }
 }
 
-function saveBlob(blob, filename, type) {
+async function saveBlob(blob, filename, type, modelName) {
   try {
     const blobUrl = URL.createObjectURL(blob);
-    const folder = type === 'photo' ? 'photos' : 'videos';
-    const path = `${BASE_DIR}/${folder}/${filename || (type === 'photo' ? 'photo' : 'video')}`;
-    chrome.downloads.download({ url: blobUrl, filename: path, saveAs: false }, () => {
-      setTimeout(() => { try { URL.revokeObjectURL(blobUrl); } catch (_) {} }, 0);
+
+    // Usar solo el nombre del archivo, Chrome lo guardará en la carpeta de Descargas predeterminada
+    let defExt = 'video.mp4';
+    if (type === 'photo') defExt = 'photo.jpg';
+    else if (type === 'audio') defExt = 'audio.mp3';
+
+    const finalFilename = filename || defExt;
+
+    chrome.downloads.download({ url: blobUrl, filename: finalFilename, saveAs: false }, () => {
+      setTimeout(() => { try { URL.revokeObjectURL(blobUrl); } catch (_) { } }, 0);
     });
   } catch (e) {
     console.error('[POPUP] download:error', e);

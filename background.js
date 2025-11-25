@@ -2,11 +2,14 @@
 const matchesTarget = (url) => {
   try {
     const u = String(url).toLowerCase();
+    // Filtrar solo llamadas de API para evitar llenar el log con imágenes/videos estáticos
+    if (!u.includes('api2')) return false;
+
     return (
-      u.includes('/posts/videos') ||
-      u.includes('/posts/photos') ||
-      u.includes('video') ||
-      u.includes('photo')
+      u.includes('/posts') ||
+      u.includes('/messages') ||
+      u.includes('/medias') ||
+      u.includes('/users')
     );
   } catch {
     return false;
@@ -86,7 +89,7 @@ function ensureDebuggerAttached(tabId) {
         // Ignorar errores aquí
       });
     });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 function detachDebugger(tabId) {
@@ -95,7 +98,7 @@ function detachDebugger(tabId) {
     chrome.debugger.detach({ tabId }, () => {
       attachedTabs.delete(tabId);
     });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 // Adjuntar automáticamente a las pestañas relevantes
@@ -105,7 +108,7 @@ function tryAttachToTab(tabId, changeInfo, tab) {
     if (/^https?:\/\/[^\s]+onlyfans\.com\//i.test(url)) {
       ensureDebuggerAttached(tabId);
     }
-  } catch (_) {}
+  } catch (_) { }
 }
 
 chrome.tabs.onUpdated.addListener((tabId, changeInfo, tab) => {
@@ -145,9 +148,9 @@ function decodeBody(body, base64Encoded) {
 
 function filterRequestHeaders(h) {
   try {
-    const allow = new Set(['authorization','cookie','user-agent','accept','accept-language','range','referer','origin']);
+    const allow = new Set(['authorization', 'cookie', 'user-agent', 'accept', 'accept-language', 'range', 'referer', 'origin']);
     const out = {};
-    for (const [k,v] of Object.entries(h || {})) {
+    for (const [k, v] of Object.entries(h || {})) {
       const key = String(k).toLowerCase();
       if (allow.has(key)) out[k] = v;
     }
@@ -158,7 +161,7 @@ function filterRequestHeaders(h) {
 function notifyPopup(event, data) {
   try {
     chrome.runtime.sendMessage({ type: 'popupLog', event, data });
-  } catch (_) {}
+  } catch (_) { }
 }
 
 chrome.debugger.onEvent.addListener((source, method, params) => {
@@ -166,7 +169,7 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
     const tabId = source && source.tabId;
     if (typeof tabId !== 'number') return;
 
-  if (method === 'Network.responseReceived') {
+    if (method === 'Network.responseReceived') {
       const resp = params && params.response;
       if (!resp) return;
       const url = resp.url || '';
@@ -240,7 +243,7 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
               if (bodyJson) {
                 //console.log('[Debugger JSON]', meta.url, bodyJson);
               }
-            } catch (_) {}
+            } catch (_) { }
             pushLog(entry);
           } catch (_) {
             pushLog(meta);
@@ -251,7 +254,7 @@ chrome.debugger.onEvent.addListener((source, method, params) => {
         }
       );
     }
-  } catch (_) {}
+  } catch (_) { }
 });
 
 // Intentar adjuntar a las pestañas existentes al iniciar el SW
@@ -261,9 +264,9 @@ try {
       for (const t of tabs || []) {
         if (t && typeof t.id === 'number') ensureDebuggerAttached(t.id);
       }
-    } catch (_) {}
+    } catch (_) { }
   });
-} catch (_) {}
+} catch (_) { }
 
 // =========================
 // Gestor de descargas: start/stop y progreso persistente
@@ -351,7 +354,7 @@ function pauseOrCancelDownload(url) {
       chrome.downloads.pause(id, () => {
         // Si no se puede pausar, intentamos cancelar
         if (chrome.runtime.lastError) {
-          chrome.downloads.cancel(id, () => {});
+          chrome.downloads.cancel(id, () => { });
         }
         withVideoUrls((st) => {
           const cur = st[url] || {};
@@ -364,7 +367,7 @@ function pauseOrCancelDownload(url) {
     }
     // Si es la actual y no hay id, abortar fetch si existiera
     if (currentUrl && (!url || url === currentUrl)) {
-      try { currentAbort && currentAbort.abort(); } catch (_) {}
+      try { currentAbort && currentAbort.abort(); } catch (_) { }
     }
     // Marcar como pausado
     withVideoUrls((st) => {
@@ -467,7 +470,7 @@ function processNext() {
           st[next] = cur;
           return st;
         });
-        try { URL.revokeObjectURL(blobUrl); } catch (_) {}
+        try { URL.revokeObjectURL(blobUrl); } catch (_) { }
         queueRunning = false;
         currentUrl = null;
         currentAbort = null;
@@ -533,11 +536,11 @@ chrome.downloads.onCreated.addListener((item) => {
       it.status = 'downloading';
       it.descargado = false;
       state[href] = it;
-      chrome.storage.local.set({ [VIDEO_URLS_KEY]: state }, () => {});
+      chrome.storage.local.set({ [VIDEO_URLS_KEY]: state }, () => { });
       activeDownloads.set(item.id, href);
       notifyPopup('download:created', { url: href, id: item.id });
     });
-  } catch (_) {}
+  } catch (_) { }
 });
 
 chrome.downloads.onChanged.addListener((delta) => {
@@ -576,7 +579,7 @@ chrome.downloads.onChanged.addListener((delta) => {
       state[href] = it;
       return state;
     });
-  } catch (_) {}
+  } catch (_) { }
 });
 
 // Inicializar estructura en storage al arrancar el SW

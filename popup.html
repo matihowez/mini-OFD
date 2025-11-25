@@ -1,200 +1,241 @@
 <!doctype html>
 <html>
-  <head>
-    <meta charset="utf-8" />
-    <title>Video Fetch Logs</title>
-    <style>
-      :root {
-        --bg: linear-gradient(135deg, #0e1116 0%, #141a22 60%, #0f1a2b 100%);
-        --surface: #121821;
-        --card-bg: rgba(255, 255, 255, 0.04);
-        --text: #e8eef6;
-        --muted: #9aa7b4;
-        --border: rgba(255, 255, 255, 0.12);
-        --accent: #7cc4ff;
-        --accent-strong: #4fb0ff;
-        --success: #7ee0b8;
-        --warning: #ffd480;
-        --error: #ff869a;
-        --radius: 12px;
-        --radius-sm: 10px;
-        --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
-        --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.25);
-        --ring: 0 0 0 2px rgba(127, 192, 255, 0.35);
-        --space: 12px;
-      }
+
+<head>
+  <meta charset="utf-8" />
+  <title>Video Fetch Logs</title>
+  <style>
+    :root {
+      --bg: linear-gradient(135deg, #0e1116 0%, #141a22 60%, #0f1a2b 100%);
+      --surface: #121821;
+      --card-bg: rgba(255, 255, 255, 0.04);
+      --text: #e8eef6;
+      --muted: #9aa7b4;
+      --border: rgba(255, 255, 255, 0.12);
+      --accent: #7cc4ff;
+      --accent-strong: #4fb0ff;
+      --success: #7ee0b8;
+      --warning: #ffd480;
+      --error: #ff869a;
+      --radius: 12px;
+      --radius-sm: 10px;
+      --shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
+      --shadow-soft: 0 6px 18px rgba(0, 0, 0, 0.25);
+      --ring: 0 0 0 2px rgba(127, 192, 255, 0.35);
+      --space: 12px;
+    }
 
 
-      html, body {
-        margin: 0;
-        padding: 0;
-      }
+    html,
+    body {
+      margin: 0;
+      padding: 0;
+    }
 
-      body {
-        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
-        color: var(--text);
-        background: var(--bg);
-        width: 420px; /* Popup width */
-        min-height: 560px;
-        display: flex;
-        flex-direction: column;
-      }
+    body {
+      font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Ubuntu, Cantarell, Noto Sans, Helvetica Neue, Arial, "Apple Color Emoji", "Segoe UI Emoji";
+      color: var(--text);
+      background: var(--bg);
+      width: 420px;
+      /* Popup width */
+      min-height: 560px;
+      display: flex;
+      flex-direction: column;
+    }
 
-      /* Header */
-      header {
-        position: sticky;
-        top: 0;
-        z-index: 2;
-        display: flex;
-        align-items: center;
-        justify-content: space-between;
-        gap: 10px;
-        padding: 12px 14px;
-        background: linear-gradient(180deg, rgba(18,24,33,0.9), rgba(18,24,33,0.6));
-        border-bottom: 1px solid var(--border);
-        backdrop-filter: blur(6px);
-      }
-      
-      h1 {
-        margin: 0;
-        font-size: 15px;
-        line-height: 1.2;
-        font-weight: 700;
-        letter-spacing: 0.2px;
-      }
+    /* Header */
+    header {
+      position: sticky;
+      top: 0;
+      z-index: 2;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      padding: 12px 14px;
+      background: linear-gradient(180deg, rgba(18, 24, 33, 0.9), rgba(18, 24, 33, 0.6));
+      border-bottom: 1px solid var(--border);
+      backdrop-filter: blur(6px);
+    }
 
-      header > div {
-        display: flex;
-        align-items: center;
-        gap: 8px;
-      }
+    h1 {
+      margin: 0;
+      font-size: 15px;
+      line-height: 1.2;
+      font-weight: 700;
+      letter-spacing: 0.2px;
+    }
 
-      /* Controls */
-      button, select {
-        font-size: 12px;
-      }
+    header>div {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      flex-direction: column;
+    }
 
-      button {
-        appearance: none;
-        border: 1px solid transparent;
-        color: #0b1220;
-        background: linear-gradient(180deg, var(--accent), var(--accent-strong));
-        color: #05111e;
-        font-weight: 600;
-        padding: 8px 11px;
-        border-radius: 999px;
-        box-shadow: 0 2px 0 rgba(0,0,0,0.25), var(--shadow-soft);
-        transition: transform 120ms ease, box-shadow 150ms ease, filter 120ms ease, opacity 120ms ease;
-        align-items: center;
-        display: flex;
-      }
+    /* Controls */
+    button,
+    select {
+      font-size: 12px;
+    }
 
-      #logs { max-height: 450px; overflow: auto; padding: 8px; }
-      .url-item { border: 1px solid #eee; border-radius: 6px; padding: 8px; margin-bottom: 8px; }
-      .url-line { font-size: 12px; word-break: break-all; margin-bottom: 6px; }
-      .bar-wrap { display: flex; align-items: center; gap: 8px; }
-      .div-wrap{
-        display: grid;
-        align-items: center;
-        grid-template-columns: 60% 40%;
-      }
-      progress { width: 100%; height: 10px; }
-      .status { font-size: 11px; color: #555; min-width: 70px; text-align: right;white-space: nowrap; }
-      select {
-        appearance: none;
-        background: var(--surface);
-        border: 1px solid var(--border);
-        color: var(--text);
-        padding: 7px 28px 7px 10px;
-        border-radius: 999px;
-        box-shadow: var(--shadow-soft);
-        background-image: linear-gradient(45deg, transparent 50%, #8fbbe2 50%), linear-gradient(135deg, #8fbbe2 50%, transparent 50%);
-        background-position: calc(100% - 14px) calc(50% - 3px), calc(100% - 9px) calc(50% - 3px);
-        background-size: 6px 6px, 6px 6px;
-        background-repeat: no-repeat;
-      }
+    button {
+      appearance: none;
+      border: 1px solid transparent;
+      color: #0b1220;
+      background: linear-gradient(180deg, var(--accent), var(--accent-strong));
+      color: #05111e;
+      font-weight: 600;
+      padding: 8px 11px;
+      border-radius: 999px;
+      box-shadow: 0 2px 0 rgba(0, 0, 0, 0.25), var(--shadow-soft);
+      transition: transform 120ms ease, box-shadow 150ms ease, filter 120ms ease, opacity 120ms ease;
+      align-items: center;
+      display: flex;
+    }
 
-            /* Cards */
-      .url-item {
-        background: var(--card-bg);
-        border: 1px solid var(--border);
-        border-radius: var(--radius);
-        padding: 12px;
-        margin-bottom: 10px;
-        box-shadow: var(--shadow);
-        transition: border-color 160ms ease, transform 160ms ease, background 200ms ease;
-      }
+    #logs {
+      max-height: 450px;
+      overflow: auto;
+      padding: 8px;
+    }
 
-      .url-item:hover {
-        border-color: rgba(124, 196, 255, 0.45);
-        transform: translateY(-1px);
-      }
+    .url-item {
+      border: 1px solid #eee;
+      border-radius: 6px;
+      padding: 8px;
+      margin-bottom: 8px;
+    }
 
-      .url-line {
-        font-size: 13px;
-        font-weight: 600;
-        color: var(--text);
-        word-break: break-all;
-        margin-bottom: 8px;
-      }
+    .url-line {
+      font-size: 12px;
+      word-break: break-all;
+      margin-bottom: 6px;
+    }
 
-      .div-wrap {
-        display: grid;
-        align-items: center;
-        grid-template-columns: 1fr auto;
-        gap: 10px 14px;
-      }
+    .bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
 
-      .bar-wrap {
-        display: flex;
-        align-items: center;
-        gap: 10px;
-      }
+    .div-wrap {
+      display: grid;
+      align-items: center;
+      grid-template-columns: 60% 40%;
+    }
 
-      .status {
-        font-size: 12px;
-        color: var(--muted);
-        min-width: 90px;
-        text-align: right;
-        white-space: nowrap;
-      }
+    progress {
+      width: 100%;
+      height: 10px;
+    }
 
-      /* Progress */
-      progress {
-        width: 100%;
-        height: 10px;
-        border: 0;
-        background: transparent;
-      }
+    .status {
+      font-size: 11px;
+      color: #555;
+      min-width: 70px;
+      text-align: right;
+      white-space: nowrap;
+    }
 
-      /* Chrome/Edge */
-      progress::-webkit-progress-bar {
-        background-color: rgba(255, 255, 255, 0.08);
-        border-radius: 999px;
-        overflow: hidden;
-      }
+    select {
+      appearance: none;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      color: var(--text);
+      padding: 7px 28px 7px 10px;
+      border-radius: 999px;
+      box-shadow: var(--shadow-soft);
+      background-image: linear-gradient(45deg, transparent 50%, #8fbbe2 50%), linear-gradient(135deg, #8fbbe2 50%, transparent 50%);
+      background-position: calc(100% - 14px) calc(50% - 3px), calc(100% - 9px) calc(50% - 3px);
+      background-size: 6px 6px, 6px 6px;
+      background-repeat: no-repeat;
+    }
 
-      progress::-webkit-progress-value {
-        background: linear-gradient(90deg, var(--success), var(--accent));
-        border-radius: 999px;
-      }
+    /* Cards */
+    .url-item {
+      background: var(--card-bg);
+      border: 1px solid var(--border);
+      border-radius: var(--radius);
+      padding: 12px;
+      margin-bottom: 10px;
+      box-shadow: var(--shadow);
+      transition: border-color 160ms ease, transform 160ms ease, background 200ms ease;
+    }
 
-      /* Firefox */
-      progress::-moz-progress-bar {
-        background: linear-gradient(90deg, var(--success), var(--accent));
-        border-radius: 999px;
-      }
-    </style>
-  </head>
-  <body>
-    <header>
-      
-      <div>
-        <div style="display: grid;gap: 5px;">
+    .url-item:hover {
+      border-color: rgba(124, 196, 255, 0.45);
+      transform: translateY(-1px);
+    }
+
+    .url-line {
+      font-size: 13px;
+      font-weight: 600;
+      color: var(--text);
+      word-break: break-all;
+      margin-bottom: 8px;
+    }
+
+    .div-wrap {
+      display: grid;
+      align-items: center;
+      grid-template-columns: 1fr auto;
+      gap: 10px 14px;
+    }
+
+    .bar-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .status {
+      font-size: 12px;
+      color: var(--muted);
+      min-width: 90px;
+      text-align: right;
+      white-space: nowrap;
+    }
+
+    /* Progress */
+    progress {
+      width: 100%;
+      height: 10px;
+      border: 0;
+      background: transparent;
+    }
+
+    /* Chrome/Edge */
+    progress::-webkit-progress-bar {
+      background-color: rgba(255, 255, 255, 0.08);
+      border-radius: 999px;
+      overflow: hidden;
+    }
+
+    progress::-webkit-progress-value {
+      background: linear-gradient(90deg, var(--success), var(--accent));
+      border-radius: 999px;
+    }
+
+    /* Firefox */
+    progress::-moz-progress-bar {
+      background: linear-gradient(90deg, var(--success), var(--accent));
+      border-radius: 999px;
+    }
+  </style>
+</head>
+
+<body>
+  <header>
+
+    <div>
+      <div style="display: grid;gap: 5px;">
+        <div style="display: grid;grid-template-columns: 73% auto;gap: 10px;">
           <select id="typeFilter" title="Tipo">
-            <option value="all">Fotos + Videos</option>
+            <option value="all">Todo</option>
             <option value="photos">Fotos</option>
             <option value="videos">Videos</option>
+            <option value="audio">Audio</option>
           </select>
           <select id="langSelect" title="Idioma">
             <option value="es">Español</option>
@@ -202,42 +243,56 @@
             <option value="ja">日本語</option>
             <option value="fr">Français</option>
             <option value="de">Deutsch</option>
-          </select>        
+          </select>
         </div>
-        
 
-        <div style="display: grid;gap:8px;">
-          <div style="display: flex;gap: 5px;">
-
-            <button id="refreshBtn" class="btn_" title="Actualizar">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
-                <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z"/>
-                <path d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466"/>
-              </svg>
-            </button>
-            <button id="startAllBtn" class="btn_" title="Iniciar todas">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill" viewBox="0 0 16 16">
-                <path d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393"/>
-              </svg>
-            </button>
-            <button id="stopAllBtn" class="btn_" title="Detener todas">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-fill" viewBox="0 0 16 16">
-                <path d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5"/>
-              </svg>
-            </button>
-            <button id="clearBtn" class="btn_" title="Limpiar registros">
-              <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill" viewBox="0 0 16 16">
-                <path d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5"/>
-              </svg>
-            </button>
-            
-          </div>
-          <div id="resultados"></div>
+        <div id="folderInfoMsg" style="font-size: 11px; color: var(--muted); padding: 4px 0;">
+          📁 Los archivos se guardan en la carpeta de Descargas predeterminada del navegador
         </div>
-        
       </div>
-    </header>
-    <div id="logs" role="list"></div>
-    <script src="popup.js" type="module"></script>
-  </body>
-  </html>
+
+
+      <div style="display: grid;gap:8px;">
+        <div style="display: flex;gap: 5px;  ">
+
+          <button id="refreshBtn" class="btn_" title="Actualizar">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor"
+              class="bi bi-arrow-clockwise" viewBox="0 0 16 16">
+              <path fill-rule="evenodd" d="M8 3a5 5 0 1 0 4.546 2.914.5.5 0 0 1 .908-.417A6 6 0 1 1 8 2z" />
+              <path
+                d="M8 4.466V.534a.25.25 0 0 1 .41-.192l2.36 1.966c.12.1.12.284 0 .384L8.41 4.658A.25.25 0 0 1 8 4.466" />
+            </svg>
+          </button>
+          <button id="startAllBtn" class="btn_" title="Iniciar todas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-play-fill"
+              viewBox="0 0 16 16">
+              <path
+                d="m11.596 8.697-6.363 3.692c-.54.313-1.233-.066-1.233-.697V4.308c0-.63.692-1.01 1.233-.696l6.363 3.692a.802.802 0 0 1 0 1.393" />
+            </svg>
+          </button>
+          <button id="stopAllBtn" class="btn_" title="Detener todas">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-stop-fill"
+              viewBox="0 0 16 16">
+              <path
+                d="M5 3.5h6A1.5 1.5 0 0 1 12.5 5v6a1.5 1.5 0 0 1-1.5 1.5H5A1.5 1.5 0 0 1 3.5 11V5A1.5 1.5 0 0 1 5 3.5" />
+            </svg>
+          </button>
+          <button id="clearBtn" class="btn_" title="Limpiar registros">
+            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="currentColor" class="bi bi-trash3-fill"
+              viewBox="0 0 16 16">
+              <path
+                d="M11 1.5v1h3.5a.5.5 0 0 1 0 1h-.538l-.853 10.66A2 2 0 0 1 11.115 16h-6.23a2 2 0 0 1-1.994-1.84L2.038 3.5H1.5a.5.5 0 0 1 0-1H5v-1A1.5 1.5 0 0 1 6.5 0h3A1.5 1.5 0 0 1 11 1.5m-5 0v1h4v-1a.5.5 0 0 0-.5-.5h-3a.5.5 0 0 0-.5.5M4.5 5.029l.5 8.5a.5.5 0 1 0 .998-.06l-.5-8.5a.5.5 0 1 0-.998.06m6.53-.528a.5.5 0 0 0-.528.47l-.5 8.5a.5.5 0 0 0 .998.058l.5-8.5a.5.5 0 0 0-.47-.528M8 4.5a.5.5 0 0 0-.5.5v8.5a.5.5 0 0 0 1 0V5a.5.5 0 0 0-.5-.5" />
+            </svg>
+          </button>
+
+        </div>
+        <div id="resultados"></div>
+      </div>
+
+    </div>
+  </header>
+  <div id="logs" role="list"></div>
+  <script src="popup.js" type="module"></script>
+</body>
+
+</html>
